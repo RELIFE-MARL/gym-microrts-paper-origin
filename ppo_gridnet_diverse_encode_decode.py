@@ -107,12 +107,14 @@ invalid_action_shape = (mapsize, envs.action_space.nvec[1:].sum() + 1)
 obs = torch.zeros((args.num_steps, args.num_envs) + envs.observation_space.shape).to(
     device
 )
-actions = torch.zeros((args.num_steps, args.num_envs) + action_space_shape).to(device)
-logprobs = torch.zeros((args.num_steps, args.num_envs)).to(device)
-rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
-dones = torch.zeros((args.num_steps, args.num_envs)).to(device)
-values = torch.zeros((args.num_steps, args.num_envs)).to(device)
-invalid_action_masks = torch.zeros(
+actions: Tensor = torch.zeros((args.num_steps, args.num_envs) + action_space_shape).to(
+    device
+)
+logprobs: Tensor = torch.zeros((args.num_steps, args.num_envs)).to(device)
+rewards: Tensor = torch.zeros((args.num_steps, args.num_envs)).to(device)
+dones: Tensor = torch.zeros((args.num_steps, args.num_envs)).to(device)
+values: Tensor = torch.zeros((args.num_steps, args.num_envs)).to(device)
+invalid_action_masks: Tensor = torch.zeros(
     (args.num_steps, args.num_envs) + invalid_action_shape
 ).to(device)
 # TRY NOT TO MODIFY: start the game
@@ -122,7 +124,7 @@ start_time = time.time()
 # https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail/blob/84a7582477fb0d5c82ad6d850fe476829dddd2e1/a2c_ppo_acktr/storage.py#L60
 next_obs = torch.Tensor(envs.reset()).to(device)
 next_done = torch.zeros(args.num_envs).to(device)
-num_updates = args.total_timesteps // args.batch_size
+num_updates = args.total_timesteps // args.batch_size  # 16276
 
 ## CRASH AND RESUME LOGIC:
 starting_update = 1
