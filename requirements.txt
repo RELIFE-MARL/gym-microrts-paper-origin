@@ -17,7 +17,7 @@ google-auth==1.28.1
 google-auth-oauthlib==0.4.4
 grpcio==1.37.0
 gym==0.17.3
-gym-microrts==0.3.2
+# gym-microrts==0.3.2
 idna==2.10
 JPype1==1.2.1
 kiwisolver==1.3.1
