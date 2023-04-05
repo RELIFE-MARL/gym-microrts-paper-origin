@@ -3,6 +3,8 @@ import time
 import numpy as np
 from stable_baselines3.common.vec_env import VecEnvWrapper
 
+from gym.spaces import Space, MultiDiscrete
+
 
 class VecMonitor(VecEnvWrapper):
     def __init__(self, venv):
@@ -11,6 +13,9 @@ class VecMonitor(VecEnvWrapper):
         self.eplens = None
         self.epcount = 0
         self.tstart = time.time()
+
+        self.action_space: MultiDiscrete
+        self.observation_space: Space
 
     def reset(self):
         obs = self.venv.reset()

@@ -199,7 +199,7 @@ class PPOGridNetDiverseEncodeDecodeArgumentParser(Tap):
     n_minibatch: Optional[int] = 4
     num_bot_envs: Optional[
         int
-    ] = 24  # the number of bot game environment; 16 bot envs measn 16 games
+    ] = 24  # the number of bot game environment; 16 bot envs means 16 games
     num_selfplay_envs: Optional[
         int
     ] = 0  # the number of self play envs; 16 self play envs means 8 games

@@ -100,7 +100,8 @@ if args.anneal_lr:
 
 # ALGO Logic: Storage for epoch data
 mapsize = 16 * 16
-action_space_shape = (mapsize, envs.action_space.shape[0] - 1)
+# envs.action_space = MultiDiscrete([256   6   4   4   4   4   7  49])
+action_space_shape = (mapsize, envs.action_space.shape[0] - 1)  # =7
 invalid_action_shape = (mapsize, envs.action_space.nvec[1:].sum() + 1)
 
 obs = torch.zeros((args.num_steps, args.num_envs) + envs.observation_space.shape).to(
