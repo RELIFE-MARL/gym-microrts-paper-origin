@@ -11,95 +11,106 @@ Make sure you have `ffmpeg` and `jdk>=1.8.0` installed. Then install the depende
 ```bash
 git clone https://github.com/vwxyzjn/gym-microrts-paper
 cd gym-microrts-paper
-python3.8 -m venv venv
-source venv/bin/activate
+python3.8 -m venv env
+source env/bin/activate
 pip install -r requirements.txt
 ```
 
 ## Reproduce and plot results
 
-
 ### Depreciation note
 
 Note that the experiments are done with [`gym_microrts==0.3.2`](https://github.com/vwxyzjn/gym-microrts/tree/v0.3.2). As we move forward beyond `v0.4.x`, we are planing to deprecate UAS despite its better performance in the paper. This is because UAS has more complex implementation and makes it really difficult to incorporate selfplay or imitation learning in the future.
 
-
 ### UAS experiments:
+
 PPO + invalid action masking + diverse bots + IMPALA-CNN (our best agent)
+
 ```bash
 python ppo_diverse_impala.py --capture-video
 ```
 
-PPO + invalid action masking  + diverse bots
+PPO + invalid action masking + diverse bots
+
 ```bash
 python ppo_diverse.py --capture-video
 ```
 
 PPO + invalid action masking
+
 ```bash
 python ppo_coacai.py --capture-video
 ```
 
 PPO + partial invalid action masking
+
 ```bash
 python ppo_coacai_partial_mask.py --capture-video
 ```
 
 PPO
+
 ```bash
 python ppo_coacai_no_mask.py --capture-video
 ```
 
-
-
 ### Gridnet experiments:
+
 PPO + invalid action masking +half self-play / half bots + encoder-decoder
+
 ```bash
-python ppo_gridnet_diverse_encode_decode.py --capture-video  --num-bot-envs 8 --num-selfplay-envs 16  --exp-name ppo_gridnet_selfplay_diverse_encode_decode
+python ppo_gridnet_diverse_encode_decode.py --capture_video True  --num_bot_envs 8 --num_selfplay_envs 16  --exp_name ppo_gridnet_selfplay_diverse_encode_decode
 ```
 
 PPO + invalid action masking + selfplay + encoder-decoder
+
 ```bash
 python ppo_gridnet_diverse_encode_decode.py --capture-video  --num-bot-envs 0 --num-selfplay-envs 24  --exp-name ppo_gridnet_selfplay_encode_decode
 ```
 
 PPO + invalid action masking + diverse bots + encoder-decoder
+
 ```bash
 python ppo_gridnet_diverse_encode_decode.py --capture-video
 ```
 
-PPO + invalid action masking  + diverse bots + IMPALA-CNN
+PPO + invalid action masking + diverse bots + IMPALA-CNN
+
 ```bash
 python ppo_gridnet_diverse_impala.py --capture-video
 ```
 
-PPO + invalid action masking  + diverse bots
+PPO + invalid action masking + diverse bots
+
 ```bash
 python ppo_gridnet_diverse.py --capture-video
 ```
 
 PPO + invalid action masking
+
 ```bash
 python ppo_gridnet_coacai.py --capture-video
 ```
 
 PPO + partial invalid action masking
+
 ```bash
 python ppo_gridnet_coacai_partial_mask.py --capture-video
 ```
 
 PPO
+
 ```bash
 python ppo_gridnet_coacai_no_mask.py --capture-video
 ```
 
 ### Experiment management
 
-We use [Weights and Biases](https://wandb.com) for experiments management, which 
+We use [Weights and Biases](https://wandb.com) for experiments management, which
 syncs the training metrics, videos of the agents playing the game, and trained models
 of our script.
 
-You can enable this feature by toggling the `--prod-mode` tag with the scripts above. 
+You can enable this feature by toggling the `--prod-mode` tag with the scripts above.
 For example, try running
 
 ```
@@ -151,7 +162,6 @@ python plot_uas_vs_gridnet.py
 ```
 
 The CSV data is obtained either through the [`wandb` export APIs](https://docs.wandb.ai/library/public-api-guide) or directly at the `wandb` dashboard such as the ["Ablation Studies" report](https://wandb.ai/vwxyzjn/gym-microrts-paper-eval/reports/Ablation-Studies--Vmlldzo1MjU2MjE)
-
 
 ## Citation
 

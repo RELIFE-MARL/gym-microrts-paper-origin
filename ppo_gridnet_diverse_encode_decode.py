@@ -68,6 +68,9 @@ class ArgumentParser(Tap):
         bool
     ] = True  # whether or not to use a clipped loss for the value function
 
+    def __init__(self):
+        super().__init__(explicit_bool=True)
+
 
 if __name__ == "__main__":
     # parser = argparse.ArgumentParser(description="PPO agent")

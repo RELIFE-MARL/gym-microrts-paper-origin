@@ -6,3 +6,4 @@ wandb
 all_data.csv
 trained_models
 trained_models.zip
+env
