@@ -80,7 +80,7 @@ class Agent(nn.Module):
                 for (logits, iam) in zip(split_logits, split_invalid_action_masks)
             ]
 
-            # Sample actions and stack them together
+            # Sample actions and stack them together. Of shape (7, 6144)
             action = torch.stack(
                 [categorical.sample() for categorical in multi_categoricals]
             )
@@ -103,6 +103,8 @@ class Agent(nn.Module):
                 CategoricalMasked(logits=logits, masks=iam, device=self.device)
                 for (logits, iam) in zip(split_logits, split_invalid_action_masks)
             ]
+        
+        # 
         logprob = torch.stack(
             [
                 categorical.log_prob(a)
