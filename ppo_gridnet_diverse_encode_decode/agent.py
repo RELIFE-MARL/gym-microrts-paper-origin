@@ -19,9 +19,15 @@ class Agent(nn.Module):
         self.mapsize = mapsize
         h, w, c = envs.observation_space.shape
 
+        # ignore the first part (position) = 78
+        self.action_space_nvec_sum = envs.action_space.nvec[1:].sum()
+
+        # ignore the first part (position) = [6, 4, 4, 4, 4, 7, 49]
+        self.action_space_nvec_list = envs.action_space.nvec[1:].tolist()
+
         self.encoder = Encoder(c)
 
-        self.actor = Decoder(78)
+        self.actor = Decoder(self.action_space_nvec_sum)
 
         self.critic = nn.Sequential(
             nn.Flatten(),
@@ -40,37 +46,59 @@ class Agent(nn.Module):
         invalid_action_masks: Optional[Tensor] = None,
         envs: Optional[VecMonitor] = None,
     ) -> Tuple[Tensor, Tensor, Tensor, Tensor]:
+        # of shape (num_envs/b, h, w, self.action_space_nvec_sum) = (24, 16, 16, 78)
         logits: Tensor = self.actor(self.forward(x))
-        grid_logits = logits.reshape(-1, envs.action_space.nvec[1:].sum())
-        split_logits = torch.split(
-            grid_logits, envs.action_space.nvec[1:].tolist(), dim=1
-        )
+
+        # of shape (num_envs * h * w, self.action_space_nvec_sum) = (6144, 78)
+        grid_logits = logits.reshape(-1, self.action_space_nvec_sum)
+
+        # of shape tuple( (6144,6), (6144,4), (6144,4), (6144,4), (6144,4), (6144,7), (6144, 49) )
+        split_logits = torch.split(grid_logits, self.action_space_nvec_list, dim=1)
 
         if action is None:
+            # of shape (num_envs, h, w, self.action_space_nvec_sum+1) = (24, 16, 16, 79)
             invalid_action_masks = torch.tensor(
                 np.array(envs.vec_client.getMasks(0))
             ).to(self.device)
+
+            # of shape (num_envs * h * w, self.action_space_nvec_sum+1) = (6144, 79)
             invalid_action_masks = invalid_action_masks.view(
                 -1, invalid_action_masks.shape[-1]
             )
+
+            # of shape tuple( (6144,6), (6144,4), (6144,4), (6144,4), (6144,4), (6144,7), (6144, 49) )
             split_invalid_action_masks = torch.split(
-                invalid_action_masks[:, 1:], envs.action_space.nvec[1:].tolist(), dim=1
+                invalid_action_masks[:, 1:],  # of shape (6144, 78)
+                self.action_space_nvec_list,
+                dim=1,
             )
+
+            # Multi-Discrete Action
             multi_categoricals = [
+                # each logits are
                 CategoricalMasked(logits=logits, masks=iam, device=self.device)
                 for (logits, iam) in zip(split_logits, split_invalid_action_masks)
             ]
+
+            # Sample actions and stack them together
             action = torch.stack(
                 [categorical.sample() for categorical in multi_categoricals]
             )
         else:
+            # of shape (num_envs * h * w, self.action_space_nvec_sum+1) = (6144, 79)
             invalid_action_masks = invalid_action_masks.view(
                 -1, invalid_action_masks.shape[-1]
             )
+
+            # ?
             action = action.view(-1, action.shape[-1]).T
+
+            # of shape tuple( (6144,6), (6144,4), (6144,4), (6144,4), (6144,4), (6144,7), (6144, 49) )
             split_invalid_action_masks = torch.split(
-                invalid_action_masks[:, 1:], envs.action_space.nvec[1:].tolist(), dim=1
+                invalid_action_masks[:, 1:], self.action_space_nvec_list, dim=1
             )
+
+            # Multi-Discrete Action
             multi_categoricals = [
                 CategoricalMasked(logits=logits, masks=iam, device=self.device)
                 for (logits, iam) in zip(split_logits, split_invalid_action_masks)
@@ -99,4 +127,14 @@ class Agent(nn.Module):
         )
 
     def get_value(self, x: Tensor) -> Tensor:
+        """Calculate scalar value based on the observation
+        Flow: input -> encoder -> critic -> output
+
+        Args:
+            x (Tensor): Observation of shape (b, h, w, n_features)
+                b can be num_envs
+
+        Returns:
+            Tensor: scalar value of the observation (b, )
+        """
         return self.critic(self.forward(x))
