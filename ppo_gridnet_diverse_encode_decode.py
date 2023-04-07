@@ -100,30 +100,51 @@ if args.anneal_lr:
 
 # ALGO Logic: Storage for epoch data
 mapsize = 16 * 16
+
 # envs.action_space = MultiDiscrete([256   6   4   4   4   4   7  49])
-action_space_shape = (mapsize, envs.action_space.shape[0] - 1)  # =7
+
+# of shape (256, 7)
+action_space_shape = (mapsize, envs.action_space.shape[0] - 1)
+
+# of shape (256, 79)
 invalid_action_shape = (mapsize, envs.action_space.nvec[1:].sum() + 1)
 
+# envs.observation_space.shape = (h, w, n_features) = (16, 16, 27)
+
+# of shape (num_steps, num_envs, h, w, n_features) = (256, 24, 16, 16, 27)
 obs = torch.zeros((args.num_steps, args.num_envs) + envs.observation_space.shape).to(
     device
 )
+
+# of shape (num_steps, num_envs, h*w, num_discrete_actions) = (256, 24, 256, 7)
 actions: Tensor = torch.zeros((args.num_steps, args.num_envs) + action_space_shape).to(
     device
 )
+
+# of shape (num_steps, num_envs) = (256, 24)
 logprobs: Tensor = torch.zeros((args.num_steps, args.num_envs)).to(device)
 rewards: Tensor = torch.zeros((args.num_steps, args.num_envs)).to(device)
 dones: Tensor = torch.zeros((args.num_steps, args.num_envs)).to(device)
 values: Tensor = torch.zeros((args.num_steps, args.num_envs)).to(device)
+
+# of shape (num_steps, num_envs, mapsize, 79) = (256, 24, 256, 79)
 invalid_action_masks: Tensor = torch.zeros(
     (args.num_steps, args.num_envs) + invalid_action_shape
 ).to(device)
+
 # TRY NOT TO MODIFY: start the game
 global_step = 0
 start_time = time.time()
+
 # Note how `next_obs` and `next_done` are used; their usage is equivalent to
 # https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail/blob/84a7582477fb0d5c82ad6d850fe476829dddd2e1/a2c_ppo_acktr/storage.py#L60
+
+# of shape (num_envs, h, w, n_features) = (24, 16, 16, 27)
 next_obs = torch.Tensor(envs.reset()).to(device)
+
+# of shape (num_envs) = (24)
 next_done = torch.zeros(args.num_envs).to(device)
+
 num_updates = args.total_timesteps // args.batch_size  # 16276
 
 ## CRASH AND RESUME LOGIC:
@@ -165,26 +186,40 @@ for update in range(starting_update, num_updates + 1):
         # ALGO LOGIC: put action logic here
         with torch.no_grad():
             values[step] = agent.get_value(obs[step]).flatten()
+            # action of shape (num_envs, h*w, num_predicted_parameters) = (24, 256, 7)
+            # logproba of shape (num_envs) = (24)
+            # entropy of shape (num_envs) = (24)
+            # invalid_action_masks of shape (num_envs, h*w, 79) = (24, 256, 79)
             action, logproba, _, invalid_action_masks[step] = agent.get_action(
-                obs[step], envs=envs
+                obs[step]
             )
 
+        # Remind:
+        # actions of shape (num_steps, num_envs, h*w, num_discrete_actions) = (256, 24, 256, 7)
+        # action of shape (num_envs, h*w, num_discrete_actions) = (24, 256, 7)
         actions[step] = action
+
+        # Remind:
+        # logprobs of shape (num_steps, num_envs) = (256, 24)
+        # logproba of shape (num_envs) = (24)
         logprobs[step] = logproba
 
         # TRY NOT TO MODIFY: execute the game and log data.
         # the real action adds the source units
+        # of shape (24, 256, 8)
         real_action = torch.cat(
             [
+                # of shape (24, 256, 1)
                 torch.stack(
                     [
                         torch.arange(0, mapsize, device=device)
                         for i in range(envs.num_envs)
                     ]
                 ).unsqueeze(2),
+                # of shape (24, 256, 7)
                 action,
             ],
-            2,
+            dim=2,
         )
 
         # at this point, the `real_action` has shape (num_envs, map_height*map_width, 8)
@@ -294,7 +329,6 @@ for update in range(starting_update, num_updates + 1):
                 b_obs[minibatch_ind],
                 b_actions.long()[minibatch_ind],
                 b_invalid_action_masks[minibatch_ind],
-                envs,
             )
             ratio = (newlogproba - b_logprobs[minibatch_ind]).exp()
 

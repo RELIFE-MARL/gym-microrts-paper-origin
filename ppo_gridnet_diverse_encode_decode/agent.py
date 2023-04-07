@@ -44,8 +44,24 @@ class Agent(nn.Module):
         x: Tensor,
         action: Optional[Tensor] = None,
         invalid_action_masks: Optional[Tensor] = None,
-        envs: Optional[VecMonitor] = None,
     ) -> Tuple[Tensor, Tensor, Tensor, Tensor]:
+        """Get multi-actions from an observations
+        Flow: input(observation) -> encoder -> actor(decoder) -> output(action)
+
+        Args:
+            x (Tensor): observation of specific timestep of shape (num_envs/b, h, w, n_features) = (24, 16, 16, 7)
+            action (Optional[Tensor], optional): if `None`, sample from discrete action space. Defaults to `None`.
+            invalid_action_masks (Optional[Tensor], optional): if `None`, get it from `envs.vec_client.getMasks`. Defaults to `None`.
+
+        Returns:
+            Tuple[Tensor, Tensor, Tensor, Tensor]: (action, logprob, entropy, invalid_action_masks)
+                with:
+                    action of shape (num_envs, h*w, num_discrete_actions) = (24, 256, 7)
+                    logprob of shape (num_envs) = (24)
+                    entropy of shape (num_envs) = (24)
+                    invalid_action_masks of shape (num_envs, h*w, 79) = (24, 256, 79)
+        """
+
         # of shape (num_envs/b, h, w, self.action_space_nvec_sum) = (24, 16, 16, 78)
         logits: Tensor = self.actor(self.forward(x))
 
@@ -58,7 +74,7 @@ class Agent(nn.Module):
         if action is None:
             # of shape (num_envs, h, w, self.action_space_nvec_sum+1) = (24, 16, 16, 79)
             invalid_action_masks = torch.tensor(
-                np.array(envs.vec_client.getMasks(0))
+                np.array(self.envs.vec_client.getMasks(0))
             ).to(self.device)
 
             # of shape (num_envs * h * w, self.action_space_nvec_sum+1) = (6144, 79)
@@ -121,16 +137,16 @@ class Agent(nn.Module):
         )
 
         # 7 discrete actions
-        num_predicted_parameters = len(envs.action_space.nvec) - 1
+        num_discrete_actions = len(self.envs.action_space.nvec) - 1
 
-        # of shape (num_envs, h*w, num_predicted_parameters) = (24, 256, 7)
-        logprob = logprob.T.view(-1, 256, num_predicted_parameters)
+        # of shape (num_envs, h*w, num_discrete_actions) = (24, 256, 7)
+        logprob = logprob.T.view(-1, 256, num_discrete_actions)
 
-        # of shape (num_envs, h*w, num_predicted_parameters) = (24, 256, 7)
-        entropy = entropy.T.view(-1, 256, num_predicted_parameters)
+        # of shape (num_envs, h*w, num_discrete_actions) = (24, 256, 7)
+        entropy = entropy.T.view(-1, 256, num_discrete_actions)
 
-        # of shape (num_envs, h*w, num_predicted_parameters) = (24, 256, 7)
-        action = action.T.view(-1, 256, num_predicted_parameters)
+        # of shape (num_envs, h*w, num_discrete_actions) = (24, 256, 7)
+        action = action.T.view(-1, 256, num_discrete_actions)
 
         # of shape (num_envs, h*w, 79) = (24, 256, 79)
         invalid_action_masks = invalid_action_masks.view(
@@ -146,7 +162,7 @@ class Agent(nn.Module):
 
     def get_value(self, x: Tensor) -> Tensor:
         """Calculate scalar value based on the observation
-        Flow: input -> encoder -> critic -> output
+        Flow: input(observation) -> encoder -> critic -> output(value)
 
         Args:
             x (Tensor): Observation of shape (b, h, w, n_features)
