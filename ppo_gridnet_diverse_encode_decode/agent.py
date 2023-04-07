@@ -73,7 +73,7 @@ class Agent(nn.Module):
                 dim=1,
             )
 
-            # Multi-Discrete Action
+            # 7 multi-discrete actions
             multi_categoricals = [
                 # each logits are
                 CategoricalMasked(logits=logits, masks=iam, device=self.device)
@@ -81,6 +81,9 @@ class Agent(nn.Module):
             ]
 
             # Sample actions and stack them together. Of shape (7, 6144)
+            # Example:
+            #   (6144, 6) -> sample -> (6144)
+            #   (6144, 4) -> sample -> (6144)
             action = torch.stack(
                 [categorical.sample() for categorical in multi_categoricals]
             )
@@ -103,28 +106,41 @@ class Agent(nn.Module):
                 CategoricalMasked(logits=logits, masks=iam, device=self.device)
                 for (logits, iam) in zip(split_logits, split_invalid_action_masks)
             ]
-        
-        # 
+
+        # of shape (num_multi_discrete_actions, 6144) = (7, 6144)
         logprob = torch.stack(
             [
                 categorical.log_prob(a)
                 for a, categorical in zip(action, multi_categoricals)
             ]
         )
+
+        # of shape (num_multi_discrete_actions, 6144) = (7, 6144)
         entropy = torch.stack(
             [categorical.entropy() for categorical in multi_categoricals]
         )
+
+        # 7 discrete actions
         num_predicted_parameters = len(envs.action_space.nvec) - 1
+
+        # of shape (num_envs, h*w, num_predicted_parameters) = (24, 256, 7)
         logprob = logprob.T.view(-1, 256, num_predicted_parameters)
+
+        # of shape (num_envs, h*w, num_predicted_parameters) = (24, 256, 7)
         entropy = entropy.T.view(-1, 256, num_predicted_parameters)
+
+        # of shape (num_envs, h*w, num_predicted_parameters) = (24, 256, 7)
         action = action.T.view(-1, 256, num_predicted_parameters)
+
+        # of shape (num_envs, h*w, 79) = (24, 256, 79)
         invalid_action_masks = invalid_action_masks.view(
-            -1, 256, envs.action_space.nvec[1:].sum() + 1
+            -1, 256, self.action_space_nvec_sum + 1
         )
+
         return (
             action,
-            logprob.sum(1).sum(1),
-            entropy.sum(1).sum(1),
+            logprob.sum(1).sum(1),  # of shape (num_envs)
+            entropy.sum(1).sum(1),  # of shape (num_envs)
             invalid_action_masks,
         )
 
