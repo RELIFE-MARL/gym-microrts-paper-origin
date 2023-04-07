@@ -206,7 +206,7 @@ for update in range(starting_update, num_updates + 1):
 
         # TRY NOT TO MODIFY: execute the game and log data.
         # the real action adds the source units
-        # of shape (24, 256, 8)
+        # of shape (num_envs, h*w, num_discrete_actions+1) = (24, 256, 8)
         real_action = torch.cat(
             [
                 # of shape (24, 256, 1)
@@ -227,6 +227,9 @@ for update in range(starting_update, num_updates + 1):
         # lot of invalid actions at cells for which no source units exist, so the rest of
         # the code removes these invalid actions to speed things up
         real_action = real_action.cpu().numpy()
+
+        # Remind that: invalid_action_masks[step] is of shape (num_envs, mapsize, 79) = (24, 256, 79)
+        # valid_actions is of shape (num_valid_actions, 8)
         valid_actions = real_action[
             invalid_action_masks[step][:, :, 0].bool().cpu().numpy()
         ]
